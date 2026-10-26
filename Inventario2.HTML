@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Inventario - IT</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (XLSX) CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.25s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 antialiased">
+
+    <!-- ================= 1. PANTALLA DE LOGIN ================= -->
+    <div id="login-view" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border border-slate-200 fade-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl mb-4 shadow-inner">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Iniciar Sesión</h2>
+                <p class="text-xs text-slate-500 mt-1">Gestión de Inventario de Equipos TI</p>
+            </div>
+
+            <!-- Alerta de Error -->
+            <div id="login-error" class="hidden mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Usuario o contraseña incorrectos.</span>
+            </div>
+
+            <form onsubmit="ejecutarLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Usuario</label>
+                    <div class="relative">
+                        <input type="text" id="login-username" required placeholder="Ej. admin"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Contraseña</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required placeholder="••••••••"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-blue-500/30 transition transform active:scale-95 text-sm">
+                    Ingresar al Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 2. DASHBOARD DE INVENTARIO ================= -->
+    <div id="app-dashboard" class="hidden min-h-screen flex flex-col">
+        <!-- Encabezado -->
+        <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-md">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-wide">Sistema de Gestión de Inventario - IT</h1>
+                        <p class="text-xs text-slate-400">Control Centralizado de Recursos Informáticos</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="descargarPlantillaWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition shadow-md hover:shadow-indigo-500/20 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Acta de entrega
+                    </button>
+
+                    <label for="excel-file" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition shadow-md hover:shadow-blue-500/20 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        Cargar Excel Manual
+                    </label>
+                    <input type="file" id="excel-file" accept=".xlsx, .xls" class="hidden" onchange="cargarExcelManual(event)">
+                    
+                    <div id="status-badge"></div>
+
+                    <button onclick="cerrarSesion()" title="Cerrar Sesión" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3.5 py-2.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-slate-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow space-y-6 fade-in">
+            
+            <!-- TARJETAS DE MÉTRICAS -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Total Equipos</p>
+                        <p id="stat-total" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">En Uso / Asignados</p>
+                        <p id="stat-uso" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Tarjeta interactiva con Clic para Disponibles -->
+                <div onclick="filtrarSoloDisponibles()" class="bg-white hover:bg-amber-50/50 rounded-2xl p-5 border-2 border-amber-200 hover:border-amber-400 shadow-sm flex items-center justify-between cursor-pointer transition transform active:scale-98">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-xs text-amber-700 font-bold uppercase">Disponibles / Stock</p>
+                            <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold"></span>
+                        </div>
+                        <p id="stat-disponible" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE GRÁFICOS ESTADÍSTICOS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+                    <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2 self-start">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                        </svg>
+                        Distribución por Estado
+                    </h3>
+                    <div class="w-full max-w-[220px] h-[220px]">
+                        <canvas id="chartEstado"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm md:col-span-2">
+                    <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Distribución por Área / Ubicación
+                    </h3>
+                    <div class="w-full h-[220px]">
+                        <canvas id="chartArea"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buscador en Tiempo Real -->
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
+                    <label for="search-input" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">🔍 Buscador Inteligente:</label>
+                    
+                    <!-- Indicador de Filtro Activo -->
+                    <div id="filter-badge" class="hidden items-center gap-2 bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-xl text-xs font-bold">
+                        <span>📦 Filtrado por: Equipos Disponibles</span>
+                        <button onclick="limpiarFiltro()" class="ml-2 hover:bg-amber-200 rounded-full p-0.5 text-amber-900 font-black">&times;</button>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <input type="text" id="search-input" onkeyup="filtrarInventario()" placeholder="Buscar por Número de Serie, Hostname, Usuario o Área..." 
+                        class="w-full pl-12 pr-4 py-3 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2">💡 Haz clic sobre cualquier fila de la tabla para abrir el desglose de periféricos y componentes asignados.</p>
+            </div>
+
+            <!-- Tabla de Resultados -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 text-sm">Equipos de IT Registrados</h2>
+                    <span id="total-count" class="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">0 equipos</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200 font-semibold">
+                                <th class="py-3.5 px-4">N°</th>
+                                <th class="py-3.5 px-4">Número de Serie</th>
+                                <th class="py-3.5 px-4">Tipo / Modelo</th>
+                                <th class="py-3.5 px-4">Marca</th>
+                                <th class="py-3.5 px-4">Estado</th>
+                                <th class="py-3.5 px-4">Área</th>
+                                <th class="py-3.5 px-4">Asignado (Nombre)</th>
+                                <th class="py-3.5 px-4">Adenda / Comentarios</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-slate-200 text-xs">
+                            <tr>
+                                <td colspan="8" class="text-center py-12 text-slate-400 font-medium">
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        <span>No hay datos cargados. Carga un archivo Excel con el botón superior.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= 3. MODAL DE DETALLE DE COMPONENTES DE HARDWARE ================= -->
+    <div id="actaModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden border border-slate-200 transform transition-all fade-in">
+            <!-- Header Modal -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="p-1.5 bg-blue-600 rounded-lg text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </span>
+                    <h3 class="font-bold text-sm sm:text-base">Ficha Técnica y Desglose de Componentes TI</h3>
+                </div>
+                <button onclick="cerrarModal()" class="text-slate-400 hover:text-white text-2xl font-bold transition">&times;</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-slate-500 font-medium block">Colaborador Asignado:</span>
+                        <span id="modal-asignado" class="text-slate-900 font-bold text-sm block"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-medium block">Usuario Red / ID:</span>
+                        <span id="modal-usuario" class="text-slate-800 font-mono font-semibold block"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-medium block">Área / Ubicación:</span>
+                        <span id="modal-ubicacion" class="text-slate-900 font-bold block"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-medium block">Hostname:</span>
+                        <span id="modal-hostname" class="text-blue-600 font-mono font-bold block"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-medium block">Estado Operativo:</span>
+                        <span id="modal-estado" class="inline-block mt-1 px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-medium block">Adenda / Contrato:</span>
+                        <span id="modal-addenda" class="text-slate-900 font-semibold block"></span>
+                    </div>
+                    <div class="sm:col-span-2 md:col-span-3">
+                        <span class="text-slate-500 font-medium block">Comentarios / Observaciones:</span>
+                        <span id="modal-comentarios" class="text-slate-700 block italic"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <span>📦 Componentes y Periféricos Asociados</span>
+                    </h4>
+                    <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 uppercase font-semibold">
+                                <tr>
+                                    <th class="py-3 px-3">Componente / Dispositivo</th>
+                                    <th class="py-3 px-3">Marca</th>
+                                    <th class="py-3 px-3">Modelo / Especificaciones</th>
+                                    <th class="py-3 px-3">Número de Serie</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 bg-white" id="modal-hardware-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+                <button onclick="cerrarModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition">
+                    Cerrar Ficha
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE JAVASCRIPT -->
+    <script>
+        let inventoryData = [];
+        let chartEstadoInstance = null;
+        let chartAreaInstance = null;
+        let filtroDisponiblesActivo = false;
+
+        // ----------------------------------------------------
+        // 1. DESCARGAR PLANTILLA WORD
+        // ----------------------------------------------------
+        function descargarPlantillaWord() {
+            const url = "Plantilla_Acta_Entrega.docx";
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "Plantilla_Acta_Entrega.docx";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // ----------------------------------------------------
+        // 2. AUTENTICACIÓN Y SESIÓN
+        // ----------------------------------------------------
+        function verificarSesion() {
+            const isAuth = localStorage.getItem("auth_session_it");
+            if (isAuth === "true") {
+                document.getElementById("login-view").classList.add("hidden");
+                document.getElementById("app-dashboard").classList.remove("hidden");
+            } else {
+                document.getElementById("login-view").classList.remove("hidden");
+                document.getElementById("app-dashboard").classList.add("hidden");
+            }
+        }
+
+        function ejecutarLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById("login-username").value.trim();
+            const pass = document.getElementById("login-password").value.trim();
+            const errorAlert = document.getElementById("login-error");
+
+            if (user === "admin" && pass === "123456") {
+                errorAlert.classList.add("hidden");
+                localStorage.setItem("auth_session_it", "true");
+                verificarSesion();
+            } else {
+                errorAlert.classList.remove("hidden");
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem("auth_session_it");
+            verificarSesion();
+        }
+
+        // ----------------------------------------------------
+        // 3. RENDERIZADO Y FILTRADO EXCLUSIVO DE DISPONIBLES
+        // ----------------------------------------------------
+        function renderTable(data) {
+            const tbody = document.getElementById("inventory-table-body");
+            const counter = document.getElementById("total-count");
+            tbody.innerHTML = "";
+            counter.innerText = `${data.length} equipos`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-8 text-slate-400 font-medium">
+                            No se encontraron equipos con el criterio de búsqueda.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            data.forEach((item, idx) => {
+                let badgeColor = "bg-slate-100 text-slate-700 border-slate-200";
+                const estado = (item.estado || "").toLowerCase();
+                
+                if (estado.includes("disponible") || estado.includes("stock")) {
+                    badgeColor = "bg-amber-50 text-amber-700 border-amber-200";
+                } else if (estado.includes("uso") || estado.includes("asignado") || estado.includes("produccion")) {
+                    badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-blue-50/60 transition cursor-pointer";
+                tr.onclick = () => abrirModal(item);
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-400">${item.n || (idx + 1)}</td>
+                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${item.serieEquipo || '-'}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-800">${item.modeloEquipo || item.tipoEquipo || '-'}</td>
+                    <td class="py-3 px-4 text-slate-600">${item.marcaEquipo || '-'}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${badgeColor}">
+                            ${item.estado || 'PRODUCCION'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-slate-600">${item.area || '-'}</td>
+                    <td class="py-3 px-4 text-slate-800 font-medium">${item.nombre || item.usuario || '-'}</td>
+                    <td class="py-3 px-4 text-slate-500">${item.addenda || item.comentarios || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            actualizarEstadisticas();
+        }
+
+        function filtrarSoloDisponibles() {
+            filtroDisponiblesActivo = true;
+            document.getElementById("filter-badge").classList.remove("hidden");
+            document.getElementById("filter-badge").classList.add("flex");
+
+            const disponibles = inventoryData.filter(item => {
+                const est = (item.estado || "").toLowerCase();
+                return est.includes("disponible") || est.includes("stock");
+            });
+
+            renderTable(disponibles);
+        }
+
+        function limpiarFiltro() {
+            filtroDisponiblesActivo = false;
+            document.getElementById("filter-badge").classList.add("hidden");
+            document.getElementById("filter-badge").classList.remove("flex");
+            document.getElementById("search-input").value = "";
+            renderTable(inventoryData);
+        }
+
+        function actualizarEstadisticas() {
+            document.getElementById("stat-total").innerText = inventoryData.length;
+
+            let uso = 0, disponible = 0;
+            const conteoAreas = {};
+
+            inventoryData.forEach(item => {
+                const est = (item.estado || "").toLowerCase();
+                if (est.includes("disponible") || est.includes("stock")) {
+                    disponible++;
+                } else {
+                    uso++;
+                }
+
+                const areaName = (item.area || "Sin Área").trim();
+                conteoAreas[areaName] = (conteoAreas[areaName] || 0) + 1;
+            });
+
+            document.getElementById("stat-uso").innerText = uso;
+            document.getElementById("stat-disponible").innerText = disponible;
+
+            renderCharts(uso, disponible, conteoAreas);
+        }
+
+        // ----------------------------------------------------
+        // 4. GRÁFICOS ESTADÍSTICOS (CHART.JS)
+        // ----------------------------------------------------
+        function renderCharts(uso, disponible, conteoAreas) {
+            const ctxEstado = document.getElementById('chartEstado').getContext('2d');
+            if (chartEstadoInstance) chartEstadoInstance.destroy();
+
+            chartEstadoInstance = new Chart(ctxEstado, {
+                type: 'doughnut',
+                data: {
+                    labels: ['En Uso / Asignado', 'Disponible / Stock'],
+                    datasets: [{
+                        data: [uso, disponible],
+                        backgroundColor: ['#10b981', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 10 } } }
+                    },
+                    onClick: (evt, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            if (index === 1) { // Click en sector naranja (Disponible)
+                                filtrarSoloDisponibles();
+                            }
+                        }
+                    }
+                }
+            });
+
+            const sortedAreas = Object.entries(conteoAreas)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 7);
+
+            const labelsArea = sortedAreas.map(item => item[0]);
+            const dataArea = sortedAreas.map(item => item[1]);
+
+            const ctxArea = document.getElementById('chartArea').getContext('2d');
+            if (chartAreaInstance) chartAreaInstance.destroy();
+
+            chartAreaInstance = new Chart(ctxArea, {
+                type: 'bar',
+                data: {
+                    labels: labelsArea,
+                    datasets: [{
+                        label: 'Cant. Equipos',
+                        data: dataArea,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function filtrarInventario() {
+            if (filtroDisponiblesActivo) {
+                limpiarFiltro();
+            }
+
+            const query = document.getElementById("search-input").value.toLowerCase().trim();
+            if (!query) {
+                renderTable(inventoryData);
+                return;
+            }
+            const filtered = inventoryData.filter(item => {
+                return (
+                    String(item.serieEquipo || '').toLowerCase().includes(query) ||
+                    String(item.hostname || '').toLowerCase().includes(query) ||
+                    String(item.nombre || '').toLowerCase().includes(query) ||
+                    String(item.usuario || '').toLowerCase().includes(query) ||
+                    String(item.area || '').toLowerCase().includes(query) ||
+                    String(item.marcaEquipo || '').toLowerCase().includes(query) ||
+                    String(item.modeloEquipo || '').toLowerCase().includes(query)
+                );
+            });
+            renderTable(filtered);
+        }
+
+        // ----------------------------------------------------
+        // 5. MODAL DE FICHA TÉCNICA
+        // ----------------------------------------------------
+        function abrirModal(item) {
+            if (!item) return;
+
+            document.getElementById("modal-asignado").innerText = item.nombre || 'Sin Asignar';
+            document.getElementById("modal-usuario").innerText = item.usuario || 'N/A';
+            document.getElementById("modal-ubicacion").innerText = item.area || 'General';
+            document.getElementById("modal-hostname").innerText = item.hostname || 'S/H';
+            document.getElementById("modal-addenda").innerText = item.addenda || 'Sin Adenda';
+            document.getElementById("modal-comentarios").innerText = item.comentarios || 'Ninguno';
+            document.getElementById("modal-estado").innerText = item.estado || 'PRODUCCION';
+
+            const hwBody = document.getElementById("modal-hardware-body");
+            
+            let specsLaptop = [];
+            if (item.procesador) specsLaptop.push(`CPU: ${item.procesador}`);
+            if (item.memoria) specsLaptop.push(`RAM: ${item.memoria}`);
+            if (item.discoDuro) specsLaptop.push(`Disco: ${item.discoDuro}`);
+            const specsLaptopText = specsLaptop.length > 0 ? specsLaptop.join(" | ") : (item.modeloEquipo || '-');
+
+            hwBody.innerHTML = `
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">💻 LAPTOP / EQUIPO PRINCIPAL</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaEquipo || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${specsLaptopText}</td>
+                    <td class="py-2.5 px-3 font-mono text-blue-600 font-bold">${item.serieEquipo || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">🔌 CARGADOR LAPTOP</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaEquipo || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.modeloCargador || 'Cargador de Equipo'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700">${item.serieCargador || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">🖥️ MONITOR / PANTALLA</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaMonitor || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.modeloMonitor || '-'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700">${item.serieMonitor || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">🔌 DOCKING STATION</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaDocking || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.modeloDocking || '-'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700">${item.serieDocking || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">⚡ CARGADOR DOCKING</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaDocking || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.modeloCargadorDocking || '-'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700">${item.serieCargadorDocking || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">⌨️🖱️ COMBO TECLADO Y MOUSE</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaCombo || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">Teclado: ${item.modeloTeclado || '-'} | Mouse: ${item.modeloMouse || '-'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700">T: ${item.serieTeclado || '-'} / M: ${item.serieMouse || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">🎒 MOCHILA / FUNDA</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.marcaMochila || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.modeloMochila || '-'}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-400">S/S</td>
+                </tr>
+            `;
+
+            document.getElementById("actaModal").classList.remove("hidden");
+            document.getElementById("actaModal").classList.add("flex");
+        }
+
+        function cerrarModal() {
+            document.getElementById("actaModal").classList.remove("flex");
+            document.getElementById("actaModal").classList.add("hidden");
+        }
+
+        // ----------------------------------------------------
+        // 6. CARGA Y PERSISTENCIA DE EXCEL
+        // ----------------------------------------------------
+        function procesarDatosExcel(jsonSheet) {
+            inventoryData = jsonSheet.map((row, index) => ({
+                n: row['N°'] || row['n'] || (index + 1),
+                serieEquipo: row['SERIE_EQUIPO'] || row['SERIE'] || '',
+                categoria: row['CATEGORIA'] || '',
+                area: row['AREA'] || '',
+                usuario: row['USUARIO'] || '',
+                nombre: row['NOMBRE'] || '',
+                hostname: row['HOSTNAME'] || '',
+                addenda: row['ADDENDA'] || '',
+                tipoEquipo: row['TIPO_EQUIPO'] || '',
+                marcaEquipo: row['MARCA_EQUIPO'] || '',
+                modeloEquipo: row['MODELO_EQUIPO'] || '',
+                estado: row['ESTADO'] || 'PRODUCCION',
+                procesador: row['PROCESADOR'] || '',
+                memoria: row['MEMORIA'] || '',
+                discoDuro: row['DISCO_DURO'] || '',
+                modeloCargador: row['MODELO_CARGADOR'] || '',
+                serieCargador: row['SERIE_CARGADOR'] || '',
+                marcaMonitor: row['MARCA_MONITOR'] || '',
+                modeloMonitor: row['MODELO_MONITOR'] || '',
+                serieMonitor: row['SERIE_MONITOR'] || '',
+                marcaDocking: row['MARCA_DOCKING'] || '',
+                modeloDocking: row['MODELO_DOCKING'] || '',
+                serieDocking: row['SERIE_DOCKING'] || '',
+                modeloCargadorDocking: row['MODELO_CARGADOR_DOCKING'] || '',
+                serieCargadorDocking: row['SERIE_CARGADOR_DOCKING'] || '',
+                marcaCombo: row['MARCA_COMBO'] || '',
+                modeloTeclado: row['MODELO_TECLADO'] || '',
+                serieTeclado: row['SERIE_TECLADO'] || '',
+                modeloMouse: row['MODELO_MOUSE'] || '',
+                serieMouse: row['SERIE_MOUSE'] || '',
+                marcaMochila: row['MARCA_MOCHILA'] || '',
+                modeloMochila: row['MODELO_MOCHILA'] || '',
+                comentarios: row['COMENTARIOS'] || ''
+            })).filter(item => String(item.serieEquipo).trim() !== "" || String(item.nombre).trim() !== "");
+
+            // Guardar en LocalStorage
+            localStorage.setItem("inventario_db", JSON.stringify(inventoryData));
+
+            renderTable(inventoryData);
+            
+            const badge = document.getElementById("status-badge");
+            badge.className = "text-xs bg-emerald-600 text-white px-3 py-2 rounded-xl font-medium shadow-sm flex items-center gap-1.5";
+            badge.innerHTML = `✅ Excel Cargado (${inventoryData.length} registros)`;
+        }
+
+        function cargarExcelManual(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonSheet = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    
+                    procesarDatosExcel(jsonSheet);
+                } catch (err) {
+                    alert("Error al procesar el archivo Excel. Asegúrate de cargar un formato válido (.xlsx o .xls).");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Inicialización y carga persistente
+        window.onload = function() {
+            verificarSesion();
+            
+            const datosGuardados = localStorage.getItem("inventario_db");
+            if (datosGuardados) {
+                try {
+                    inventoryData = JSON.parse(datosGuardados);
+                    renderTable(inventoryData);
+                    
+                    const badge = document.getElementById("status-badge");
+                    badge.className = "text-xs bg-emerald-600 text-white px-3 py-2 rounded-xl font-medium shadow-sm flex items-center gap-1.5";
+                    badge.innerHTML = `✅ Datos Guardados (${inventoryData.length} registros)`;
+                } catch(e) {
+                    console.error("Error al cargar datos locales", e);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
